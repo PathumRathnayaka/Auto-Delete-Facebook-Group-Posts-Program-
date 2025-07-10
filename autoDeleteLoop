@@ -1,0 +1,59 @@
+async function autoDeleteLoop() {
+    let deletedCount = 0;
+
+    const delay = (ms) => new Promise(res => setTimeout(res, ms));
+
+    async function deleteVisiblePosts() {
+        let buttons = document.querySelectorAll('[aria-label="Actions for this post"]');
+        if (buttons.length === 0) return false;
+
+        for (let i = 0; i < buttons.length; i++) {
+            buttons[i].click();
+            await delay(1000);
+
+            let deleteBtn = [...document.querySelectorAll('[role="menuitem"]')].find(el =>
+                el.innerText.includes("Move to Recycle bin") || el.innerText.includes("Delete post")
+            );
+            if (deleteBtn) {
+                deleteBtn.click();
+                await delay(1000);
+
+                let confirmBtn = [...document.querySelectorAll('div[role="dialog"] [role="button"]')].find(el =>
+                    el.innerText === "Delete" || el.innerText === "Move"
+                );
+                if (confirmBtn) {
+                    confirmBtn.click();
+                    deletedCount++;
+                    console.log(`✅ Deleted post #${deletedCount}`);
+                }
+            }
+
+            await delay(2500); // Wait between posts
+        }
+
+        return true;
+    }
+
+    async function scrollAndWait() {
+        window.scrollBy(0, 1000); // Scroll down
+        await delay(2000); // Wait for posts to load
+    }
+
+    // Run loop
+    while (true) {
+        let hasPosts = await deleteVisiblePosts();
+        if (!hasPosts) {
+            console.log("🔁 No posts found, scrolling...");
+            await scrollAndWait();
+            // Check again after scroll
+            hasPosts = await deleteVisiblePosts();
+            if (!hasPosts) {
+                console.log("✅ Done! No more posts found.");
+                break;
+            }
+        }
+        await scrollAndWait();
+    }
+}
+
+autoDeleteLoop();
